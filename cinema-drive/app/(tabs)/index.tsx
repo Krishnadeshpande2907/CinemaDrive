@@ -38,7 +38,7 @@ const GIST_URL = 'https://gist.githubusercontent.com/Krishnadeshpande2907/ffb180
 // ---
 // TODO: Replace this with the "Web Application" Client ID you just created
 // ---
-const WEB_CLIENT_ID = '159232393975-b7ps4c43soam7bqdtdr1d03l8su3udlh.apps.googleusercontent.com';
+const WEB_CLIENT_ID = process.env.WEB_CLIENT_ID;
 
 // --- NEW: This tells the auth service to close the browser popup when done ---
 WebBrowser.maybeCompleteAuthSession();
