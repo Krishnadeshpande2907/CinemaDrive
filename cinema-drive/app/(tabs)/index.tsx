@@ -51,7 +51,7 @@ type Movie = {
   description: string;
   posterUrl: string;
   fileId: string; // We'll need this for Phase 4
-  actors: string[];
+  Actors: string;
 };
 
 // --- Movie Item Component ---
@@ -157,8 +157,17 @@ export default function HomeScreen() {
         }
 
         // Check actors (safely)
-        if (movie.actors && Array.isArray(movie.actors) && movie.actors.some(actor => typeof actor === 'string' && actor.toLowerCase().includes(lowerCaseQuery))) {
-          return true;
+        // if (movie.actors && Array.isArray(movie.actors) && movie.actors.some(actor => typeof actor === 'string' && actor.toLowerCase().includes(lowerCaseQuery))) {
+        //   return true;
+        // }
+
+        if (movie.Actors) {
+          if(typeof movie.Actors === 'string' && movie.Actors.toLowerCase().includes(lowerCaseQuery)) {
+            return true;
+          }
+          if (Array.isArray(movie.Actors) && movie.Actors.some(actor => typeof actor === 'string' && actor.toLowerCase().includes(lowerCaseQuery))) {
+            return true;
+          }
         }
 
         return false; // No match
