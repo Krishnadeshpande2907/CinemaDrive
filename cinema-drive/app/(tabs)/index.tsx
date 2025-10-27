@@ -9,7 +9,8 @@ import {
   // SafeAreaView,
   TouchableOpacity,
   Alert,
-  Button // Added Button import
+  Button, // Added Button import
+  TextInput
 } from 'react-native';
 import axios from 'axios';
 // This component from Expo Router lets us set the screen's title in the header
@@ -20,12 +21,8 @@ import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import * as FileSystem from 'expo-file-system/legacy';
 
-// import {
-//   documentDirectory,
-//   type DownloadProgressData // This imports the Type
-// } from 'expo-file-system';
-
-// import { createDownloadResumable } from 'expo-file-system/legacy';
+// import 'dotenv/config';
+// import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 // --- FIX: Correct import for SafeAreaView ---
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -38,7 +35,9 @@ const GIST_URL = 'https://gist.githubusercontent.com/Krishnadeshpande2907/ffb180
 // ---
 // TODO: Replace this with the "Web Application" Client ID you just created
 // ---
-const WEB_CLIENT_ID = process.env.WEB_CLIENT_ID;
+const WEB_CLIENT_ID = process.env.EXPO_PUBLIC_WEB_CLIENT_ID as string;
+const ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_ANDROID_CLIENT_ID as string;
+const IOS_CLIENT_ID = process.env.EXPO_PUBLIC_IOS_CLIENT_ID as string;
 
 // --- NEW: This tells the auth service to close the browser popup when done ---
 WebBrowser.maybeCompleteAuthSession();
@@ -52,6 +51,7 @@ type Movie = {
   description: string;
   posterUrl: string;
   fileId: string; // We'll need this for Phase 4
+  actors: string[];
 };
 
 // --- Movie Item Component ---
@@ -77,6 +77,9 @@ export default function HomeScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [movies, setMovies] = useState<Movie[]>([]); // Use the Movie type
 
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredMovies, setFilteredMovies] = useState<Movie[]>([]); // This holds the *displayed* list
+
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [downloadProgress, setDownloadProgress] = useState<number>(0);
   const [isDownloading, setIsDownloading] = useState<boolean>(false);
@@ -85,13 +88,12 @@ export default function HomeScreen() {
   // --- NEW: Set up the Google Authentication hook ---
   const [request, response, promptAsync] = Google.useAuthRequest({
     webClientId: WEB_CLIENT_ID,
-    // Note: We'll add androidClientId and iosClientId here LATER
-    // when we are ready for a production build. The webClientId
-    // is all we need for development.
+    androidClientId: ANDROID_CLIENT_ID,
+    iosClientId: IOS_CLIENT_ID,
     scopes: ['https://www.googleapis.com/auth/drive.readonly'], // Request read-only access
   });
 
-  // --- NEW: This useEffect handles the *response* from the login ---
+  // This useEffect handles the *response* from the login 
   useEffect(() => {
     if (response) {
       if (response.type === 'success') {
@@ -115,6 +117,7 @@ export default function HomeScreen() {
     try {
       const response = await axios.get(GIST_URL);
       setMovies(response.data); // Store the movie array in state
+      setFilteredMovies(response.data); // Initially, filtered list is the full list
     } catch (error) {
       console.error('Error fetching movie list:', error);
       // You could set an error state here to show the user
@@ -127,6 +130,42 @@ export default function HomeScreen() {
   useEffect(() => {
     fetchMovies();
   }, []); // The empty array [] means it only runs once
+
+  // --- THIS IS THE NEW, FIXED CODE ---
+  useEffect(() => {
+    if (searchQuery === '') {
+      setFilteredMovies(movies); // If search is empty, show all movies
+    } else {
+      const lowerCaseQuery = searchQuery.toLowerCase();
+      
+      const newFilteredMovies = movies.filter(movie => {
+        
+        // Check title (safely)
+        if (movie.title && typeof movie.title === 'string' && movie.title.toLowerCase().includes(lowerCaseQuery)) {
+          return true;
+        }
+
+        // Check genre (safely)
+        // This now handles if genre is a single string OR an array of strings
+        if (movie.genre) {
+          if (typeof movie.genre === 'string' && movie.genre.toLowerCase().includes(lowerCaseQuery)) {
+            return true;
+          }
+          if (Array.isArray(movie.genre) && movie.genre.some(g => typeof g === 'string' && g.toLowerCase().includes(lowerCaseQuery))) {
+            return true;
+          }
+        }
+
+        // Check actors (safely)
+        if (movie.actors && Array.isArray(movie.actors) && movie.actors.some(actor => typeof actor === 'string' && actor.toLowerCase().includes(lowerCaseQuery))) {
+          return true;
+        }
+
+        return false; // No match
+      });
+      setFilteredMovies(newFilteredMovies);
+    }
+  }, [searchQuery, movies]);
 
   // --- This is the download function (no changes) ---
   const startDownload = async (movie: Movie, token: string) => {
@@ -209,10 +248,27 @@ export default function HomeScreen() {
       {/* This Stack.Screen component lets us set the title of the header bar */}
       <Stack.Screen options={{ title: 'Movie Catalog' }} />
       
+      <View style={styles.searchContainer}>
+        <TextInput
+          style={styles.searchBar}
+          placeholder="Search movies, genres, actors..."
+          value={searchQuery}
+          onChangeText={setSearchQuery} // Updates the searchQuery state on every key press
+        />
+      </View>
+      
+      {isDownloading && (
+        <View style={styles.downloadStatus}>
+          <Text style={styles.downloadText}>Downloading... {downloadProgress.toFixed(0)}%</Text>
+          <View style={[styles.progressBar, { width: `${downloadProgress}%` }]} />
+        </View>
+      )}
+
+      {/* --- NEW --- Point FlatList data to filteredMovies --- */}
       <FlatList
-        data={movies} // The array of movies from your state
-        renderItem={({ item }) => <MovieItem item={item} />} // Uses our custom component
-        keyExtractor={(item) => item.id} // Uses the unique 'id' from your JSON
+        data={filteredMovies} 
+        renderItem={({ item }) => <MovieItem item={item} />}
+        keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
       />
     </SafeAreaView>
@@ -221,9 +277,22 @@ export default function HomeScreen() {
 
 // --- Add these styles ---
 const styles = StyleSheet.create({
+  searchContainer: {
+    padding: 10,
+    backgroundColor: '#f0f0f0',
+  },
+  searchBar: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderRadius: 20,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
   container: {
     flex: 1,
-    backgroundColor: '#f0f0f0', // A light grey background
+    backgroundColor: '#f0f0f0',
   },
   loadingContainer: {
     flex: 1,
@@ -252,21 +321,31 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   textContainer: {
-    flex: 1, // Allows text to take up remaining space
-    justifyContent: 'center',
+    flex: 1,
+    justifyContent: 'space-between',
   },
   title: {
     fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 5,
   },
   details: {
     fontSize: 14,
     color: '#666',
-    marginBottom: 8,
   },
   description: {
     fontSize: 12,
     color: '#888',
+  },
+  downloadStatus: {
+    padding: 10,
+    backgroundColor: '#eee',
+  },
+  downloadText: {
+    textAlign: 'center',
+    marginBottom: 5,
+  },
+  progressBar: {
+    height: 5,
+    backgroundColor: 'blue',
   },
 });
