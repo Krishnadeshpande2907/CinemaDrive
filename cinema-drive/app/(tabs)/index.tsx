@@ -47,30 +47,12 @@ type Movie = {
   id: string;
   title: string;
   year: string;
-  genre: string;
+  genre: string[];
   description: string;
   posterUrl: string;
   fileId: string; // We'll need this for Phase 4
-  Actors: string;
+  Actors: string[];
 };
-
-// --- Movie Item Component ---
-// This component defines how each movie item looks
-const MovieItem = ({ item }: { item: Movie }) => (
-  <TouchableOpacity style={styles.itemContainer} onPress={() => {
-    
-    // We'll add the download logic here in Phase 4
-    
-    console.log('Pressed movie:', item.title, 'File ID:', item.fileId);
-  }}>
-    <Image source={{ uri: item.posterUrl }} style={styles.poster} />
-    <View style={styles.textContainer}>
-      <Text style={styles.title}>{item.title}</Text>
-      <Text style={styles.details}>{item.year}  ·  {item.genre}</Text>
-      <Text style={styles.description} numberOfLines={2}>{item.description}</Text>
-    </View>
-  </TouchableOpacity>
-);
 
 // --- This is your main screen component ---
 export default function HomeScreen() {
@@ -147,22 +129,12 @@ export default function HomeScreen() {
 
         // Check genre (safely)
         // This now handles if genre is a single string OR an array of strings
-        if (movie.genre) {
-          if (typeof movie.genre === 'string' && movie.genre.toLowerCase().includes(lowerCaseQuery)) {
+        if (Array.isArray(movie.genre) && movie.genre.some(g => typeof g === 'string' && g.toLowerCase().includes(lowerCaseQuery))) {
             return true;
-          }
-          if (Array.isArray(movie.genre) && movie.genre.some(g => typeof g === 'string' && g.toLowerCase().includes(lowerCaseQuery))) {
-            return true;
-          }
         }
 
-        if (movie.Actors) {
-          if(typeof movie.Actors === 'string' && movie.Actors.toLowerCase().includes(lowerCaseQuery)) {
+        if (Array.isArray(movie.Actors) && movie.Actors.some(actor => typeof actor === 'string' && actor.toLowerCase().includes(lowerCaseQuery))) {
             return true;
-          }
-          if (Array.isArray(movie.Actors) && movie.Actors.some(actor => typeof actor === 'string' && actor.toLowerCase().includes(lowerCaseQuery))) {
-            return true;
-          }
         }
 
         return false; // No match
@@ -219,14 +191,15 @@ export default function HomeScreen() {
     }
   };
 
+  // This component defines how each movie item looks
   // --- Movie Item Component (no changes) ---
   const MovieItem = ({ item }: { item: Movie }) => (
     <View style={styles.itemContainer}>
       <Image source={{ uri: item.posterUrl }} style={styles.poster} />
       <View style={styles.textContainer}>
         <Text style={styles.title}>{item.title}</Text>
-        <Text style={styles.details}>{item.year}  ·  {item.genre}</Text>
-        <Text style={styles.description} numberOfLines={2}>{item.description}</Text>
+        <Text style={styles.details}>{item.year}  ·  {item.genre.join(', ')}</Text>
+        <Text style={styles.description} numberOfLines={3}>{item.description}</Text>
         <Button
           title="Download"
           onPress={() => handleDownloadPress(item)}
@@ -333,12 +306,14 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   details: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#666',
+    marginBottom: 8,
   },
   description: {
-    fontSize: 12,
-    color: '#888',
+    fontSize: 18,
+    color: '#141414ff',
+    marginBottom: 8,
   },
   downloadStatus: {
     padding: 10,
