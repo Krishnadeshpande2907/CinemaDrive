@@ -30,7 +30,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 // ---
 // TODO: Replace this with your Gist's "Raw" URL
 // ---
-const GIST_URL = 'https://gist.githubusercontent.com/Krishnadeshpande2907/ffb1807c632d0e51d20945705674cc59/raw/dbd86f1edbe2fbfea580e1f0217448094888ba9e/movies.json';
+// const GIST_URL = 'https://gist.githubusercontent.com/Krishnadeshpande2907/ffb1807c632d0e51d20945705674cc59/raw/dbd86f1edbe2fbfea580e1f0217448094888ba9e/movies.json';
+const GIST_URL = process.env.EXPO_PUBLIC_GIST_URL as string;
 
 // ---
 // TODO: Replace this with the "Web Application" Client ID you just created
@@ -136,7 +137,7 @@ export default function HomeScreen() {
     if (searchQuery === '') {
       setFilteredMovies(movies); // If search is empty, show all movies
     } else {
-      const lowerCaseQuery = searchQuery.toLowerCase();
+      const lowerCaseQuery = searchQuery.toLowerCase().trim();
       
       const newFilteredMovies = movies.filter(movie => {
         
@@ -155,11 +156,6 @@ export default function HomeScreen() {
             return true;
           }
         }
-
-        // Check actors (safely)
-        // if (movie.actors && Array.isArray(movie.actors) && movie.actors.some(actor => typeof actor === 'string' && actor.toLowerCase().includes(lowerCaseQuery))) {
-        //   return true;
-        // }
 
         if (movie.Actors) {
           if(typeof movie.Actors === 'string' && movie.Actors.toLowerCase().includes(lowerCaseQuery)) {
