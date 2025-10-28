@@ -30,7 +30,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 // ---
 // TODO: Replace this with your Gist's "Raw" URL
 // ---
-// const GIST_URL = 'https://gist.githubusercontent.com/Krishnadeshpande2907/ffb1807c632d0e51d20945705674cc59/raw/dbd86f1edbe2fbfea580e1f0217448094888ba9e/movies.json';
 const GIST_URL = process.env.EXPO_PUBLIC_GIST_URL as string;
 
 // ---
